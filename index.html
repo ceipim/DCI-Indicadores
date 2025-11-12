@@ -26,6 +26,7 @@
             --color-warning-dark: #8a6d3b;
             --color-loading: #e3f2fd;
             --color-focus: #2196f3;
+            --color-tree-line: #c0c0c0;
             
             --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             --font-mono: 'Courier New', Courier, monospace;
@@ -132,7 +133,7 @@
             padding: 1.5rem;
             margin-bottom: 1.5rem;
             border: 1px solid var(--color-border);
-            position: relative; /* Para loading overlay */
+            position: relative;
         }
 
         /* Formulários */
@@ -376,7 +377,6 @@
             gap: 1.5rem;
         }
 
-        /* CORREÇÃO: Layout específico para 3 colunas no Verificador */
         @media (min-width: 1200px) {
             .results-container.verificador {
                 grid-template-columns: 1fr 1fr 1fr;
@@ -495,85 +495,209 @@
         .ncm-expirada { color: var(--color-warning-dark); }
         .ncm-nao-vigente { color: var(--color-error-dark); }
 
-        /* Árvore Hierárquica (Aba Livro) */
+        /* =========================================================================
+           ESTILOS DA ÁRVORE HIERÁRQUICA (Aba Livro de NCMs)
+           ========================================================================= */
+        
         #ncmTree {
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            background-color: #fff;
+            font-family: var(--font-family);
+            font-size: 0.95rem;
+            background-color: #fafafa;
             border-radius: 8px;
             padding: 1.5rem;
             overflow-y: auto;
             border: 1px solid var(--color-border);
-            max-height: 80vh;
+            max-height: 85vh;
+            line-height: 1.5;
         }
 
+        /* Seções - Estilo principal */
         .ncm-secao-title {
             list-style: none;
-            font-weight: bold;
-            font-size: 1.1rem;
+            font-weight: 700;
+            font-size: 1.15rem;
             color: var(--color-primary-dark);
-            margin-top: 1.2rem;
+            margin-top: 1.5rem;
+            padding: 0.75rem 1rem;
+            background: linear-gradient(90deg, #f0f4f8 0%, transparent 100%);
+            border-radius: 6px;
             font-family: var(--font-family);
-            line-height: 1.4;
-            padding-left: 1.5em;
-            text-indent: -1.5em;
+            cursor: pointer;
+            transition: var(--transition);
+            border-left: 4px solid var(--color-primary);
         }
 
         .ncm-secao-title:first-child {
             margin-top: 0;
         }
 
+        .ncm-secao-title:hover {
+            background: linear-gradient(90deg, #e3eaf3 0%, transparent 100%);
+            transform: translateX(4px);
+        }
+
+        /* Container de capítulos */
+        .secoes-container {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Nós da árvore */
         .tree-node {
             list-style: none;
-            margin-left: 20px;
             position: relative;
         }
 
-        .tree-node .node-label {
-            cursor: pointer;
-            display: block;
-            padding: 4px 6px;
-            border-radius: 4px;
+        /* Linha guia vertical */
+        .tree-node.level-1::before,
+        .tree-node.level-2::before,
+        .tree-node.level-3::before,
+        .tree-node.level-4::before {
+            content: '';
+            position: absolute;
+            left: 12px;
+            top: -10px;
+            bottom: 10px;
+            width: 1px;
+            background: var(--color-tree-line);
+        }
+
+        .tree-node:last-child::before {
+            bottom: 50%;
+        }
+
+        /* Linha guia horizontal */
+        .tree-node .node-label::before {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: 50%;
+            width: 20px;
+            height: 1px;
+            background: var(--color-tree-line);
             transition: var(--transition);
         }
 
+        /* Estilo dos labels */
+        .tree-node .node-label {
+            cursor: pointer;
+            display: block;
+            padding: 6px 12px 6px 30px;
+            border-radius: 4px;
+            transition: var(--transition);
+            position: relative;
+            font-size: 0.95rem;
+            margin: 2px 0;
+        }
+
+        .tree-node.level-0 .node-label {
+            padding-left: 1rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .tree-node.level-1 .node-label {
+            padding-left: 3rem;
+            font-weight: 600;
+            color: var(--color-primary-dark);
+        }
+
+        .tree-node.level-2 .node-label {
+            padding-left: 4.5rem;
+            font-weight: 500;
+        }
+
+        .tree-node.level-3 .node-label {
+            padding-left: 6rem;
+            font-size: 0.9rem;
+            color: var(--color-text-light);
+        }
+
+        .tree-node.level-4 .node-label {
+            padding-left: 7.5rem;
+            font-size: 0.85rem;
+            color: var(--color-text-light);
+        }
+
+        .tree-node.level-5 .node-label {
+            padding-left: 9rem;
+            font-size: 0.85rem;
+            font-family: var(--font-mono);
+            color: #2c3e50;
+        }
+
         .tree-node .node-label:hover {
-            background-color: var(--color-bg);
+            background-color: rgba(0, 86, 179, 0.05);
+            color: var(--color-primary-dark);
         }
 
         .tree-node .node-label:focus {
             outline: 2px solid var(--color-focus);
             outline-offset: -2px;
+            background-color: rgba(0, 86, 179, 0.1);
         }
 
-        .tree-node .node-label::before {
-            content: '►';
-            display: inline-block;
-            width: 1em;
-            margin-left: -1em;
+        /* Indicador de expansão */
+        .tree-node .node-label::after {
+            content: '▶';
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
             font-size: 0.8em;
             color: var(--color-primary);
-            transition: transform 0.1s ease;
+            transition: transform 0.2s ease;
+            font-family: Arial, sans-serif;
         }
 
-        .tree-node.expanded > .node-label::before {
-            transform: rotate(90deg);
+        .tree-node.expanded > .node-label::after {
+            transform: translateY(-50%) rotate(90deg);
         }
 
+        .tree-node.level-5 .node-label::after {
+            content: '';
+            /* NCMs de 8 dígitos não têm expansão */
+        }
+
+        /* Sub-árvore */
         .tree-node .sub-tree {
             display: none;
+            margin-left: 0;
         }
 
         .tree-node.expanded > .sub-tree {
             display: block;
+            padding-left: 1.5rem;
         }
 
-        .tree-node.level-5 > .node-label::before {
-            content: '•';
-            font-size: 0.6em;
-            vertical-align: middle;
-            position: static;
-            transform: none;
+        /* NCM Expirada */
+        .tree-node.ncm-expirada .node-label {
+            color: var(--color-warning-dark);
+            font-style: italic;
+        }
+
+        .tree-node.ncm-expirada .node-label::after {
+            color: var(--color-warning-dark);
+        }
+
+        /* Search box */
+        .tree-search {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            width: 100%;
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: var(--font-family);
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .tree-node.level-1 .node-label { padding-left: 2.5rem; }
+            .tree-node.level-2 .node-label { padding-left: 3.5rem; }
+            .tree-node.level-3 .node-label { padding-left: 4.5rem; }
+            .tree-node.level-4 .node-label { padding-left: 5.5rem; }
+            .tree-node.level-5 .node-label { padding-left: 6.5rem; }
         }
 
         /* Toast Notifications */
@@ -687,7 +811,7 @@
             animation: spin 0.8s linear infinite;
         }
 
-        /* Cards de cópia no Verificador - CORREÇÃO DE LAYOUT */
+        /* Caixas de cópia no Verificador */
         .copy-box {
             background: var(--color-bg-light);
             border-radius: var(--border-radius);
@@ -741,20 +865,6 @@
             .copy-box textarea {
                 width: 100%;
             }
-        }
-
-        /* CORREÇÃO: Garantir que cards de resultado apareçam mesmo vazios */
-        .result-card.always-show {
-            display: block !important;
-        }
-
-        .result-card.always-show .result-list {
-            min-height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--color-text-light);
-            font-style: italic;
         }
     </style>
 </head>
@@ -1068,7 +1178,6 @@
             static extractNcms(text) {
                 if (!text || typeof text !== 'string') return new Set();
                 
-                // Regex robusto que preserva pontos e trata múltiplos separadores
                 const cleanedText = text.replace(/[^\d.,;\n\r\s]/g, '');
                 const potentialNcms = cleanedText.split(/[\s,;\n\r]+/).filter(Boolean);
                 
@@ -1906,29 +2015,22 @@
                     nvG2.length, "NCM Não Vigente (Grupo 2)", "NCMs Não Vigentes (Grupo 2)", nvG2);
             }
 
-            // CORREÇÃO: Armazenar itens no dataset para cópia formatada
             updateSummaryBox(box, title, text, count, singular, plural, items = []) {
                 box.classList.remove('hidden');
                 title.textContent = `${Utils.getPluralText(count, singular, plural)} - (${count})`;
                 
                 if (count > 0) {
                     text.value = items.map(code => Utils.formatNCM(code)).join(', ');
-                    text.dataset.items = JSON.stringify(items); // Guardar original
+                    text.dataset.items = JSON.stringify(items);
                 } else {
                     text.value = '';
                 }
             }
 
             showLoading(isLoading) {
-                if (isLoading) {
-                    this.elements.loadingOverlay.classList.remove('hidden');
-                    this.elements.compareBtn.classList.add('loading');
-                    this.elements.compareBtn.disabled = true;
-                } else {
-                    this.elements.loadingOverlay.classList.add('hidden');
-                    this.elements.compareBtn.classList.remove('loading');
-                    this.elements.compareBtn.disabled = false;
-                }
+                this.elements.loadingOverlay.classList.toggle('hidden', !isLoading);
+                this.elements.compareBtn.classList.toggle('loading', isLoading);
+                this.elements.compareBtn.disabled = isLoading;
             }
 
             clear() {
@@ -1978,7 +2080,7 @@
                 
                 setTimeout(() => {
                     try {
-                        this.renderSectionsWithChapters(); // CORREÇÃO: Renderiza seções + capítulos
+                        this.renderSectionsWithChapters();
                         this.isRendered = true;
                         Toast.info("Árvore hierárquica carregada");
                     } catch (error) {
@@ -1989,7 +2091,6 @@
                 }, 50);
             }
 
-            // CORREÇÃO: Renderiza seções E capítulos inicialmente, mas não os níveis inferiores
             renderSectionsWithChapters() {
                 this.container.innerHTML = '';
                 
@@ -2014,7 +2115,7 @@
                                 false
                             );
                             capNode.dataset.id = `1-${capData.code}`;
-                            capNode.dataset.populated = "true"; // Marcar como populado
+                            capNode.dataset.populated = "true";
                             subTree.appendChild(capNode);
                         }
                     });
