@@ -3,10 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verificador de NCMs Vigentes - Versão Segura</title>
-    
-    <!-- CSP Header (simulado - em produção deve ser enviado pelo servidor) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+    <title>Verificador de NCMs Vigentes - Versão Corrigida</title>
     
     <style>
         :root {
@@ -123,7 +120,6 @@
         }
 
         .database-stats {
-            @extend .status-bar;
             font-size: 0.9rem;
             margin-bottom: 1rem;
         }
@@ -136,6 +132,7 @@
             padding: 1.5rem;
             margin-bottom: 1.5rem;
             border: 1px solid var(--color-border);
+            position: relative; /* Para loading overlay */
         }
 
         /* Formulários */
@@ -266,7 +263,7 @@
             background-color: rgba(0, 0, 0, 0.2);
             color: #fff;
         }
-        
+
         .tab-button.active {
             background-color: var(--color-bg-light);
             color: var(--color-primary-dark);
@@ -379,14 +376,15 @@
             gap: 1.5rem;
         }
 
-        @media (min-width: 992px) {
+        /* CORREÇÃO: Layout específico para 3 colunas no Verificador */
+        @media (min-width: 1200px) {
             .results-container.verificador {
                 grid-template-columns: 1fr 1fr 1fr;
             }
         }
         
-        @media (min-width: 768px) {
-            .results-container {
+        @media (min-width: 768px) and (max-width: 1199px) {
+            .results-container.verificador {
                 grid-template-columns: 1fr 1fr;
             }
         }
@@ -668,7 +666,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -689,14 +687,32 @@
             animation: spin 0.8s linear infinite;
         }
 
-        /* Search box for tree */
-        .tree-search {
+        /* Cards de cópia no Verificador - CORREÇÃO DE LAYOUT */
+        .copy-box {
+            background: var(--color-bg-light);
+            border-radius: var(--border-radius);
+            box-shadow: 0 6px 12px var(--color-shadow);
+            padding: 1rem;
             margin-bottom: 1rem;
-            padding: 0.75rem;
-            width: 100%;
+            border: 1px solid var(--color-border);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .copy-box.hidden {
+            display: none;
+        }
+
+        .copy-box textarea {
+            flex: 1;
+            height: 56px;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            padding: 0.5rem;
             border: 1px solid var(--color-border);
             border-radius: 8px;
-            font-size: 0.9rem;
+            resize: vertical;
         }
 
         /* Responsividade */
@@ -717,6 +733,28 @@
                 flex-direction: column;
                 text-align: center;
             }
+
+            .copy-box {
+                flex-direction: column;
+            }
+
+            .copy-box textarea {
+                width: 100%;
+            }
+        }
+
+        /* CORREÇÃO: Garantir que cards de resultado apareçam mesmo vazios */
+        .result-card.always-show {
+            display: block !important;
+        }
+
+        .result-card.always-show .result-list {
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-text-light);
+            font-style: italic;
         }
     </style>
 </head>
@@ -791,6 +829,30 @@
                 </div>
             </div>
 
+            <!-- Cards de Resultado com ordem corrigida -->
+            <div class="results-container verificador">
+                <div class="card result-card vigente hidden" id="vigenteCard">
+                    <h3>
+                        <span>Vigentes - (<span id="vigenteCount" aria-live="polite">0</span>)</span>
+                    </h3>
+                    <div id="vigenteList" class="result-list" role="list" aria-label="Lista de NCMs vigentes"></div>
+                </div>
+
+                <div class="card result-card expirado hidden" id="expiradoCard">
+                    <h3>
+                        <span>Expiradas - (<span id="expiradoCount" aria-live="polite">0</span>)</span>
+                    </h3>
+                    <div id="expiradoList" class="result-list" role="list" aria-label="Lista de NCMs expiradas"></div>
+                </div>
+                
+                <div class="card result-card nao-vigente hidden" id="invalidoCard">
+                    <h3>
+                        <span>Inválidas - (<span id="invalidoCount" aria-live="polite">0</span>)</span>
+                    </h3>
+                    <div id="invalidoList" class="result-list" role="list" aria-label="Lista de NCMs inválidas"></div>
+                </div>
+            </div>
+
             <!-- Caixas de Cópia -->
             <div class="copy-box hidden" id="vigenteCopyBox">
                 <label for="vigenteListText" class="sr-only">Lista de NCMs vigentes</label>
@@ -816,30 +878,6 @@
                 <button id="copyNaoVigenteListBtn" class="danger focusable" aria-label="Copiar lista de NCMs não vigentes">
                     Copiar Não Vigentes
                 </button>
-            </div>
-
-            <!-- Cards de Resultado -->
-            <div class="results-container verificador">
-                <div class="card result-card vigente hidden" id="vigenteCard">
-                    <h3>
-                        <span>Vigentes - (<span id="vigenteCount" aria-live="polite">0</span>)</span>
-                    </h3>
-                    <div id="vigenteList" class="result-list" role="list" aria-label="Lista de NCMs vigentes"></div>
-                </div>
-
-                <div class="card result-card expirado hidden" id="expiradoCard">
-                    <h3>
-                        <span>Expiradas - (<span id="expiradoCount" aria-live="polite">0</span>)</span>
-                    </h3>
-                    <div id="expiradoList" class="result-list" role="list" aria-label="Lista de NCMs expiradas"></div>
-                </div>
-                
-                <div class="card result-card nao-vigente hidden" id="invalidoCard">
-                    <h3>
-                        <span>Inválidas - (<span id="invalidoCount" aria-live="polite">0</span>)</span>
-                    </h3>
-                    <div id="invalidoList" class="result-list" role="list" aria-label="Lista de NCMs inválidas"></div>
-                </div>
             </div>
         </div>
         
@@ -982,27 +1020,18 @@
         <a href="/docs/atualizacao" target="_blank" rel="noopener noreferrer" aria-label="Instruções de atualização da base de dados (abre em nova aba)">
             Instruções de Atualização
         </a>
-        <p>&copy; 2025. Design by <span class="overline-md">MD</span>. Versão 2.0</p>
+        <p>&copy; 2025. Design by <span class="overline-md">MD</span>. Versão 2.1</p>
     </footer>
 
     <div id="toastContainer" role="region" aria-live="polite" aria-label="Notificações"></div>
 
-    <!--
-        JAVASCRIPT REFATORADO E SEGURO
-        - Sem autenticação hardcoded
-        - Arquitetura modular com classes
-        - Tratamento de erros robusto
-        - Debounce e performance otimizada
-        - Acessibilidade ARIA completa
-        - Virtual scrolling para listas grandes
-    -->
     <script>
         // =========================================================================
         // CONFIGURAÇÕES E CONSTANTES
         // =========================================================================
         const CONFIG = {
             CSV_FILE: 'Tabela_NCM_Vigente.csv',
-            CSV_FETCH_TIMEOUT: 30000, // 30 segundos
+            CSV_FETCH_TIMEOUT: 30000,
             DEBOUNCE_DELAY: 300,
             TOAST_DURATION: {
                 success: 3000,
@@ -1039,7 +1068,7 @@
             static extractNcms(text) {
                 if (!text || typeof text !== 'string') return new Set();
                 
-                // Regex mais robusto que preserva pontos e trata múltiplos separadores
+                // Regex robusto que preserva pontos e trata múltiplos separadores
                 const cleanedText = text.replace(/[^\d.,;\n\r\s]/g, '');
                 const potentialNcms = cleanedText.split(/[\s,;\n\r]+/).filter(Boolean);
                 
@@ -1067,7 +1096,6 @@
                 } catch (err) {
                     console.error('Erro ao copiar:', err);
                     
-                    // Fallback seguro
                     try {
                         const textArea = document.createElement('textarea');
                         textArea.value = text;
@@ -1134,15 +1162,12 @@
                 
                 this.container.appendChild(toast);
                 
-                // Trigger animation
                 setTimeout(() => toast.classList.add('show'), 10);
                 
-                // Auto-remove
                 const autoRemove = setTimeout(() => {
                     this.hide(toast);
                 }, duration || CONFIG.TOAST_DURATION[type] || CONFIG.TOAST_DURATION.info);
                 
-                // Remove on click
                 toast.addEventListener('click', () => {
                     clearTimeout(autoRemove);
                     this.hide(toast);
@@ -1249,7 +1274,6 @@
                     treeMap: new Map()
                 };
 
-                // Extrair data de atualização da linha 2
                 if (lines[1]) {
                     const dateMatch = lines[1].match(/(\d{2})\/(\d{2})\/(\d{4})/);
                     if (dateMatch) {
@@ -1257,7 +1281,6 @@
                     }
                 }
 
-                // Processar dados
                 for (let i = headerLineIndex + 1; i < lines.length; i++) {
                     const line = lines[i].trim();
                     if (!line) continue;
@@ -1282,7 +1305,6 @@
                         };
                     }
 
-                    // Construir mapa da árvore
                     if (codeRaw) {
                         data.treeMap.set(codeRaw, { desc, code: codeRaw, children: [] });
                     }
@@ -1306,6 +1328,29 @@
                 this.updateDate = '';
                 this.vigenteCount = 0;
                 this.isLoaded = false;
+                this.secoesNCM = {
+                    "I": { "nome": "Seção I - ANIMAIS VIVOS E PRODUTOS DO REINO ANIMAL", "caps": ["01", "02", "03", "04", "05"] },
+                    "II": { "nome": "Seção II - PRODUTOS DO REINO VEGETAL", "caps": ["06", "07", "08", "09", "10", "11", "12", "13", "14"] },
+                    "III": { "nome": "Seção III - GORDURAS E ÓLEOS ANIMAIS, VEGETAIS...", "caps": ["15"] },
+                    "IV": { "nome": "Seção IV - PRODUTOS DAS INDÚSTRIAS ALIMENTARES...", "caps": ["16", "17", "18", "19", "20", "21", "22", "23", "24"] },
+                    "V": { "nome": "Seção V - PRODUTOS MINERAIS", "caps": ["25", "26", "27"] },
+                    "VI": { "nome": "Seção VI - PRODUTOS DAS INDÚSTRIAS QUÍMICAS...", "caps": ["28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38"] },
+                    "VII": { "nome": "Seção VII - PLÁSTICO E SUAS OBRAS; BORRACHA...", "caps": ["39", "40"] },
+                    "VIII": { "nome": "Seção VIII - PELES, COUROS, PELES COM PELO...", "caps": ["41", "42", "43"] },
+                    "IX": { "nome": "Seção IX - MADEIRA, CARVÃO VEGETAL...", "caps": ["44", "45", "46"] },
+                    "X": { "nome": "Seção X - PASTAS DE MADEIRA OU DE OUTRAS MATÉRIAS...", "caps": ["47", "48", "49"] },
+                    "XI": { "nome": "Seção XI - MATÉRIAS TÊXTEIS E SUAS OBRAS", "caps": ["50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63"] },
+                    "XII": { "nome": "Seção XII - CALÇADO, CHAPÉUS E ARTIGOS...", "caps": ["64", "65", "66", "67"] },
+                    "XIII": { "nome": "Seção XIII - OBRAS DE PEDRA, GESSO, CIMENTO...", "caps": ["68", "69", "70"] },
+                    "XIV": { "nome": "Seção XIV - PÉROLAS, PEDRAS PRECIOSAS...", "caps": ["71"] },
+                    "XV": { "nome": "Seção XV - METAIS COMUNS E SUAS OBRAS", "caps": ["72", "73", "74", "75", "76", "78", "79", "80", "81", "82", "83"] },
+                    "XVI": { "nome": "Seção XVI - MÁQUINAS E APARELHOS, MATERIAL ELÉTRICO...", "caps": ["84", "85"] },
+                    "XVII": { "nome": "Seção XVII - MATERIAL DE TRANSPORTE", "caps": ["86", "87", "88", "89"] },
+                    "XVIII": { "nome": "Seção XVIII - INSTRUMENTOS E APARELHOS DE ÓPTICA...", "caps": ["90", "91", "92"] },
+                    "XIX": { "nome": "Seção XIX - ARMAS E MUNIÇÕES; SUAS PARTES...", "caps": ["93"] },
+                    "XX": { "nome": "Seção XX - MERCADORIAS E PRODUTOS DIVERSOS", "caps": ["94", "95", "96"] },
+                    "XXI": { "nome": "Seção XXI - OBJETOS DE ARTE, DE COLEÇÃO E ANTIGUIDADES", "caps": ["97"] }
+                };
             }
 
             async load() {
@@ -1320,14 +1365,12 @@
                     const response = await Utils.fetchWithTimeout(fileToFetch);
                     const buffer = await response.arrayBuffer();
                     
-                    // Tentar UTF-8 primeiro
                     let csvText = new TextDecoder('utf-8').decode(buffer);
                     let data;
 
                     try {
                         data = CSVParser.parse(csvText);
                     } catch (utf8Error) {
-                        // Fallback para ISO-8859-1
                         Toast.warn('Tentando codificação alternativa...');
                         csvText = new TextDecoder('iso-8859-1').decode(buffer);
                         data = CSVParser.parse(csvText);
@@ -1339,7 +1382,6 @@
                     this.vigenteCount = data.vigenteCount;
                     this.isLoaded = true;
 
-                    // Linkar árvore
                     this.linkTreeMap();
 
                     this.updateUI();
@@ -1449,7 +1491,6 @@
                 this.elements.copyVigenteBtn.addEventListener('click', () => this.copyVigentes());
                 this.elements.copyNaoVigenteBtn.addEventListener('click', () => this.copyNaoVigentes());
                 
-                // Debounce para input
                 this.elements.input.addEventListener('input', Utils.debounce(() => {
                     this.updateInputStats();
                 }, CONFIG.DEBOUNCE_DELAY));
@@ -1457,7 +1498,6 @@
 
             updateInputStats() {
                 const count = Utils.extractNcms(this.elements.input.value).size;
-                // Opcional: mostrar contador em tempo real
             }
 
             async verify() {
@@ -1475,7 +1515,6 @@
                 this.showLoading(true);
                 
                 try {
-                    // Processamento em batch para não bloquear UI
                     const result = await this.processNCMs(inputText);
                     this.displayResults(result);
                     this.lastResults = result;
@@ -1494,7 +1533,6 @@
                     throw new Error("Nenhum código NCM de 8 dígitos válido encontrado.");
                 }
 
-                // Processamento assíncrono para não travar UI
                 return new Promise(resolve => {
                     setTimeout(() => {
                         const result = { vigentes: [], expiradas: [], invalidas: [] };
@@ -1572,7 +1610,6 @@
                     return;
                 }
 
-                // Virtual scrolling para listas grandes
                 const useVirtual = items.length > CONFIG.VIRTUAL_SCROLL_THRESHOLD;
                 
                 if (useVirtual) {
@@ -1584,8 +1621,7 @@
             }
 
             renderVirtualList(container, items, type) {
-                // Implementação simplificada de virtual scrolling
-                const itemHeight = 60; // aproximado
+                const itemHeight = 60;
                 const containerHeight = 400;
                 const visibleCount = Math.ceil(containerHeight / itemHeight);
                 
@@ -1597,14 +1633,12 @@
                     const html = visibleItems.map(item => this.createListItemHTML(item, type)).join('');
                     container.innerHTML = html;
                     
-                    // Adicionar padding para manter altura total
                     container.style.paddingTop = `${startIndex * itemHeight}px`;
                     container.style.paddingBottom = `${(items.length - endIndex) * itemHeight}px`;
                 };
 
                 renderItems();
                 
-                // Scroll handler
                 container.addEventListener('scroll', Utils.debounce(() => {
                     startIndex = Math.floor(container.scrollTop / itemHeight);
                     renderItems();
@@ -1760,7 +1794,6 @@
                     Utils.copyToClipboard(this.elements.nvG2Text.value, "NCMs não vigentes do G2 copiadas!")
                 );
 
-                // Atualizar contadores em tempo real
                 const updateCounts = Utils.debounce(() => {
                     const count1 = Utils.extractNcms(this.elements.inputG1.value).size;
                     const count2 = Utils.extractNcms(this.elements.inputG2.value).size;
@@ -1844,11 +1877,11 @@
                         });
 
                         // Ordenar
-                        result.comum.sort();
-                        result.g1Exclusivo.sort();
-                        result.g2Exclusivo.sort();
-                        result.nvG1.sort();
-                        result.nvG2.sort();
+                        result.comum.sort((a, b) => a.localeCompare(b));
+                        result.g1Exclusivo.sort((a, b) => a.localeCompare(b));
+                        result.g2Exclusivo.sort((a, b) => a.localeCompare(b));
+                        result.nvG1.sort((a, b) => a.localeCompare(b));
+                        result.nvG2.sort((a, b) => a.localeCompare(b));
 
                         resolve(result);
                     }, 10);
@@ -1856,37 +1889,33 @@
             }
 
             displayResults({ comum, g1Exclusivo, g2Exclusivo, nvG1, nvG2 }) {
+                // CORREÇÃO: Sempre mostrar todos os cards, mesmo com count 0
                 this.updateSummaryBox(this.elements.comumBox, this.elements.comumTitle, this.elements.comumText, 
-                    comum.length, "NCM vigente comum", "NCMs vigentes comuns");
+                    comum.length, "NCM vigente comum", "NCMs vigentes comuns", comum);
                 
                 this.updateSummaryBox(this.elements.exG1Box, this.elements.exG1Title, this.elements.exG1Text, 
-                    g1Exclusivo.length, "NCM vigente apenas no Grupo 1", "NCMs vigentes apenas no Grupo 1");
+                    g1Exclusivo.length, "NCM vigente apenas no Grupo 1", "NCMs vigentes apenas no Grupo 1", g1Exclusivo);
                 
                 this.updateSummaryBox(this.elements.exG2Box, this.elements.exG2Title, this.elements.exG2Text, 
-                    g2Exclusivo.length, "NCM vigente apenas no Grupo 2", "NCMs vigentes apenas no Grupo 2");
+                    g2Exclusivo.length, "NCM vigente apenas no Grupo 2", "NCMs vigentes apenas no Grupo 2", g2Exclusivo);
                 
                 this.updateSummaryBox(this.elements.nvG1Box, this.elements.nvG1Title, this.elements.nvG1Text, 
-                    nvG1.length, "NCM Não Vigente (Grupo 1)", "NCMs Não Vigentes (Grupo 1)");
+                    nvG1.length, "NCM Não Vigente (Grupo 1)", "NCMs Não Vigentes (Grupo 1)", nvG1);
                 
                 this.updateSummaryBox(this.elements.nvG2Box, this.elements.nvG2Title, this.elements.nvG2Text, 
-                    nvG2.length, "NCM Não Vigente (Grupo 2)", "NCMs Não Vigentes (Grupo 2)");
+                    nvG2.length, "NCM Não Vigente (Grupo 2)", "NCMs Não Vigentes (Grupo 2)", nvG2);
             }
 
-            updateSummaryBox(box, title, text, count, singular, plural) {
+            // CORREÇÃO: Armazenar itens no dataset para cópia formatada
+            updateSummaryBox(box, title, text, count, singular, plural, items = []) {
+                box.classList.remove('hidden');
+                title.textContent = `${Utils.getPluralText(count, singular, plural)} - (${count})`;
+                
                 if (count > 0) {
-                    box.classList.remove('hidden');
-                    title.textContent = `${Utils.getPluralText(count, singular, plural)} - (${count})`;
-                    text.value = Array.from({ length: count }, (_, i) => {
-                        const code = text.dataset.items ? JSON.parse(text.dataset.items)[i] : text.value;
-                        return Utils.formatNCM(code);
-                    }).join(', ');
-                    // Prepara dados para cópia formatada
-                    text.value = Array.from({ length: count }, (_, i) => {
-                        const items = text.dataset.items ? JSON.parse(text.dataset.items) : text.value.split(', ');
-                        return Utils.formatNCM(items[i] || items[0]);
-                    }).join(', ');
+                    text.value = items.map(code => Utils.formatNCM(code)).join(', ');
+                    text.dataset.items = JSON.stringify(items); // Guardar original
                 } else {
-                    box.classList.add('hidden');
+                    text.value = '';
                 }
             }
 
@@ -1918,6 +1947,7 @@
                 [this.elements.comumText, this.elements.exG1Text, this.elements.exG2Text,
                  this.elements.nvG1Text, this.elements.nvG2Text].forEach(text => {
                     text.value = '';
+                    delete text.dataset.items;
                 });
 
                 Toast.info("Comparação limpa!");
@@ -1934,30 +1964,6 @@
                 this.searchInput = document.getElementById('treeSearch');
                 this.loadingOverlay = document.getElementById('treeLoadingOverlay');
                 this.isRendered = false;
-                this.secoesNCM = {
-                    "I": { "nome": "Seção I - ANIMAIS VIVOS E PRODUTOS DO REINO ANIMAL", "caps": ["01", "02", "03", "04", "05"] },
-                    "II": { "nome": "Seção II - PRODUTOS DO REINO VEGETAL", "caps": ["06", "07", "08", "09", "10", "11", "12", "13", "14"] },
-                    "III": { "nome": "Seção III - GORDURAS E ÓLEOS ANIMAIS, VEGETAIS OU DE ORIGEM MICROBIANA...", "caps": ["15"] },
-                    "IV": { "nome": "Seção IV - PRODUTOS DAS INDÚSTRIAS ALIMENTARES; BEBIDAS...", "caps": ["16", "17", "18", "19", "20", "21", "22", "23", "24"] },
-                    "V": { "nome": "Seção V - PRODUTOS MINERAIS", "caps": ["25", "26", "27"] },
-                    "VI": { "nome": "Seção VI - PRODUTOS DAS INDÚSTRIAS QUÍMICAS...", "caps": ["28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38"] },
-                    "VII": { "nome": "Seção VII - PLÁSTICO E SUAS OBRAS; BORRACHA...", "caps": ["39", "40"] },
-                    "VIII": { "nome": "Seção VIII - PELES, COUROS, PELES COM PELO...", "caps": ["41", "42", "43"] },
-                    "IX": { "nome": "Seção IX - MADEIRA, CARVÃO VEGETAL...", "caps": ["44", "45", "46"] },
-                    "X": { "nome": "Seção X - PASTAS DE MADEIRA OU DE OUTRAS MATÉRIAS...", "caps": ["47", "48", "49"] },
-                    "XI": { "nome": "Seção XI - MATÉRIAS TÊXTEIS E SUAS OBRAS", "caps": ["50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63"] },
-                    "XII": { "nome": "Seção XII - CALÇADO, CHAPÉUS E ARTIGOS...", "caps": ["64", "65", "66", "67"] },
-                    "XIII": { "nome": "Seção XIII - OBRAS DE PEDRA, GESSO, CIMENTO...", "caps": ["68", "69", "70"] },
-                    "XIV": { "nome": "Seção XIV - PÉROLAS NATURAIS OU CULTIVADAS...", "caps": ["71"] },
-                    "XV": { "nome": "Seção XV - METAIS COMUNS E SUAS OBRAS", "caps": ["72", "73", "74", "75", "76", "78", "79", "80", "81", "82", "83"] },
-                    "XVI": { "nome": "Seção XVI - MÁQUINAS E APARELHOS, MATERIAL ELÉTRICO...", "caps": ["84", "85"] },
-                    "XVII": { "nome": "Seção XVII - MATERIAL DE TRANSPORTE", "caps": ["86", "87", "88", "89"] },
-                    "XVIII": { "nome": "Seção XVIII - INSTRUMENTOS E APARELHOS DE ÓPTICA...", "caps": ["90", "91", "92"] },
-                    "XIX": { "nome": "Seção XIX - ARMAS E MUNIÇÕES; SUAS PARTES...", "caps": ["93"] },
-                    "XX": { "nome": "Seção XX - MERCADORIAS E PRODUTOS DIVERSOS", "caps": ["94", "95", "96"] },
-                    "XXI": { "nome": "Seção XXI - OBJETOS DE ARTE, DE COLEÇÃO E ANTIGUIDADES", "caps": ["97"] }
-                };
-                
                 this.setupEventListeners();
             }
 
@@ -1972,7 +1978,7 @@
                 
                 setTimeout(() => {
                     try {
-                        this.renderSections();
+                        this.renderSectionsWithChapters(); // CORREÇÃO: Renderiza seções + capítulos
                         this.isRendered = true;
                         Toast.info("Árvore hierárquica carregada");
                     } catch (error) {
@@ -1983,10 +1989,12 @@
                 }, 50);
             }
 
-            renderSections() {
+            // CORREÇÃO: Renderiza seções E capítulos inicialmente, mas não os níveis inferiores
+            renderSectionsWithChapters() {
                 this.container.innerHTML = '';
                 
-                Object.entries(this.secoesNCM).forEach(([id, secao]) => {
+                Object.entries(this.db.secoesNCM).forEach(([id, secao]) => {
+                    // Criar nó da Seção
                     const sectionNode = this.createTreeNode(
                         secao.nome, 
                         0, 
@@ -1994,6 +2002,23 @@
                         secao.nome
                     );
                     sectionNode.dataset.id = `0-${id}`;
+                    
+                    // Pré-popular Capítulos
+                    const subTree = sectionNode.querySelector('.sub-tree');
+                    secao.caps.forEach(capId => {
+                        const capData = this.db.treeMap.get(capId);
+                        if (capData) {
+                            const capNode = this.createTreeNode(
+                                `Capítulo ${capData.code} - ${capData.desc}`, 
+                                1, 
+                                false
+                            );
+                            capNode.dataset.id = `1-${capData.code}`;
+                            capNode.dataset.populated = "true"; // Marcar como populado
+                            subTree.appendChild(capNode);
+                        }
+                    });
+                    
                     this.container.appendChild(sectionNode);
                 });
             }
@@ -2010,7 +2035,6 @@
                 label.textContent = text;
                 label.tabIndex = -1;
                 
-                // Keyboard navigation
                 label.addEventListener('keydown', (e) => {
                     switch(e.key) {
                         case 'Enter':
@@ -2037,7 +2061,6 @@
                     }
                 });
                 
-                // Verificar se é NCM expirada
                 const cleanCode = text.replace(/\D/g, '');
                 if (cleanCode.length === 8 && text.includes('(Expirada)')) {
                     label.style.color = "var(--color-warning-dark)";
@@ -2077,37 +2100,29 @@
 
                 let children = [];
                 
-                if (level === '0') {
-                    // Seção -> Capítulos
-                    children = this.secoesNCM[code]?.caps || [];
-                    children = children.map(capId => this.db.treeMap.get(capId)).filter(Boolean);
-                } else {
-                    // Outros níveis
-                    const nodeData = this.db.treeMap.get(code);
-                    children = nodeData?.children || [];
+                const nodeData = this.db.treeMap.get(code);
+                if (nodeData && nodeData.children) {
+                    children = nodeData.children;
                 }
 
                 if (children.length === 0) return;
 
-                // Renderização em batch para performance
                 const renderBatch = (startIndex) => {
                     const endIndex = Math.min(startIndex + CONFIG.TREE_RENDER_BATCH_SIZE, children.length);
                     
                     for (let i = startIndex; i < endIndex; i++) {
                         const child = children[i];
                         const hasChildren = child.children && child.children.length > 0;
-                        const isLeaf = !hasChildren;
                         
                         let labelText = `${child.code} - ${child.desc}`;
                         
-                        // Verificar se é NCM expirada
                         const cleanCode = child.code.replace(/\D/g, '');
                         if (cleanCode.length === 8 && this.db.getNCM(cleanCode)?.status === 'expirado') {
                             labelText += ' (Expirada)';
                         }
                         
-                        const childNode = this.createTreeNode(labelText, parseInt(level) + 1, isLeaf);
-                        if (!isLeaf) {
+                        const childNode = this.createTreeNode(labelText, parseInt(level) + 1, !hasChildren);
+                        if (hasChildren) {
                             childNode.dataset.id = `${parseInt(level) + 1}-${child.code}`;
                         }
                         
@@ -2154,7 +2169,6 @@
                     
                     if (label.includes(query)) {
                         node.style.display = '';
-                        // Expandir caminho até o nó encontrado
                         this.expandPathToNode(node);
                     } else {
                         node.style.display = 'none';
@@ -2178,11 +2192,7 @@
             }
 
             showLoading(isLoading) {
-                if (isLoading) {
-                    this.loadingOverlay.classList.remove('hidden');
-                } else {
-                    this.loadingOverlay.classList.add('hidden');
-                }
+                this.loadingOverlay.classList.toggle('hidden', !isLoading);
             }
         }
 
@@ -2202,15 +2212,12 @@
 
             async initialize() {
                 try {
-                    // Carregar base de dados primeiro
                     await this.db.load();
                     
-                    // Inicializar módulos
                     this.verifier = new NCMVerifier(this.db);
                     this.comparator = new NCMComparator(this.db);
                     this.tree = new NCMHierarchyTree(this.db);
                     
-                    // Configurar navegação por abas
                     this.setupTabNavigation();
                     
                     Toast.success("Aplicação inicializada com sucesso!");
@@ -2230,7 +2237,6 @@
                     });
                 });
 
-                // Keyboard navigation para abas
                 tabButtons.forEach((button, index) => {
                     button.addEventListener('keydown', (e) => {
                         switch(e.key) {
@@ -2252,19 +2258,16 @@
             }
 
             switchTab(tabName) {
-                // Esconder todas as abas
                 document.querySelectorAll('.tab-content').forEach(panel => {
                     panel.classList.add('hidden');
                 });
                 
-                // Remover estado ativo de todos os botões
                 document.querySelectorAll('.tab-button').forEach(btn => {
                     btn.classList.remove('active');
                     btn.setAttribute('aria-selected', 'false');
                     btn.setAttribute('tabindex', '-1');
                 });
                 
-                // Mostrar aba selecionada
                 const targetPanel = document.getElementById(`aba-${tabName}`);
                 const targetButton = document.getElementById(`tabBtn${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
                 
@@ -2276,7 +2279,6 @@
                     
                     this.currentTab = tabName;
                     
-                    // Lazy load da árvore se necessário
                     if (tabName === 'livro' && this.tree && !this.tree.isRendered) {
                         this.tree.render();
                     }
@@ -2288,7 +2290,6 @@
         // INICIALIZAÇÃO DA APLICAÇÃO
         // =========================================================================
         document.addEventListener('DOMContentLoaded', () => {
-            // Prevenir comportamento de Refresh em mobile
             let lastTouchEnd = 0;
             document.addEventListener('touchend', (e) => {
                 const now = Date.now();
@@ -2298,16 +2299,8 @@
                 lastTouchEnd = now;
             }, { passive: false });
 
-            // Inicializar app
             window.ncmApp = new NCMVerifierApp();
         });
-
-        // =========================================================================
-        // SERVICE WORKER (OPCIONAL - PARA OFFLINE)
-        // =========================================================================
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(console.error);
-        }
     </script>
 </body>
 </html>
